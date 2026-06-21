@@ -1,0 +1,18 @@
+# macOS
+.DS_Store
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# Build output (.app bundle assembled by build.sh)
+build/
+
+# Xcode (if ever opened there)
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+xcuserdata/
+*.xcuserstate
+
+# Claude Code local/personal settings
+.claude/settings.local.json
