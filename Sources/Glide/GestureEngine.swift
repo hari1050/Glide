@@ -3,8 +3,7 @@
 //  Glide
 //
 //  Mouse gestures: hold the configured gesture button and move the mouse; on
-//  release, the dominant stroke direction fires its mapped action. (Mos has no
-//  equivalent for ordinary mice — this is Glide-only.)
+//  release, the dominant stroke direction fires its mapped action.
 //
 
 import AppKit
@@ -29,6 +28,8 @@ final class GestureEngine {
         switch type {
         case .otherMouseDown:
             if Int(event.getIntegerValueField(.mouseEventButtonNumber)) == cfg.gestureButton {
+                // Leave excluded apps alone — pass the button through normally.
+                if TargetApp.isExcluded(event, config: cfg) { return (false, event) }
                 active = true
                 startLocation = event.location
                 return (true, nil) // swallow the press; it belongs to the gesture

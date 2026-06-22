@@ -2,14 +2,13 @@
 
 A small, self-built macOS menu-bar utility for **smooth mouse-wheel scrolling**,
 **scroll-direction reversal**, **per-app rules**, **mouse-button remapping**, and
-**mouse gestures** — a trustworthy, fully-auditable alternative to
-[Mos](https://github.com/Caldis/Mos) (and then some — Mos has no gestures for
-ordinary mice).
+**mouse gestures** — a trustworthy, fully-auditable scrolling/input enhancer you
+compile yourself.
 
 No network access. No telemetry. No analytics. Two permissions, both standard and
 local:
-- **Accessibility** — required of *any* app that reads/rewrites input events
-  (Mos and every smooth-scroll app needs this; there is no way around it).
+- **Accessibility** — required of *any* app that reads/rewrites input events;
+  there is no way around it.
 - **Automation → System Events** — only used to fire system actions (Mission
   Control, Spaces, keyboard shortcuts) from gestures/buttons. Prompted on first use.
 

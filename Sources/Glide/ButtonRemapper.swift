@@ -27,32 +27,32 @@ final class ButtonRemapper {
 
         let number = Int(event.getIntegerValueField(.mouseEventButtonNumber))
 
-        switch type {
-        case .otherMouseDown:
-            if let capture = pendingCapture {
-                pendingCapture = nil
-                swallowed.insert(number)
-                DispatchQueue.main.async { capture(number) }
-                return nil
-            }
-            if let mapping = cfg.buttonMappings.first(where: {
-                $0.buttonNumber == number && $0.action != .none
-            }) {
-                swallowed.insert(number)
-                ActionRunner.run(mapping.action)
-                return nil
-            }
-            return event
-
-        case .otherMouseUp:
-            if swallowed.contains(number) {
-                swallowed.remove(number)
-                return nil
-            }
-            return event
-
-        default:
-            return event
+        // Capture mode (from the settings UI) takes priority over everything.
+        if type == .otherMouseDown, let capture = pendingCapture {
+            pendingCapture = nil
+            swallowed.insert(number)
+            DispatchQueue.main.async { capture(number) }
+            return nil
         }
+
+        // Always swallow the `up` for a button whose `down` we swallowed,
+        // even if the cursor has since moved over an excluded app.
+        if type == .otherMouseUp, swallowed.contains(number) {
+            swallowed.remove(number)
+            return nil
+        }
+
+        // Per-app pass-through: leave excluded apps' buttons untouched.
+        if TargetApp.isExcluded(event, config: cfg) { return event }
+
+        if type == .otherMouseDown,
+           let mapping = cfg.buttonMappings.first(where: {
+               $0.buttonNumber == number && $0.action != .none
+           }) {
+            swallowed.insert(number)
+            ActionRunner.run(mapping.action)
+            return nil
+        }
+        return event
     }
 }

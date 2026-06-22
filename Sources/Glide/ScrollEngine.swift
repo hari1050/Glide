@@ -31,11 +31,6 @@ final class ScrollEngine: NSObject {
     /// app needs — building events from scratch does not reliably scroll.
     private var snapshot: CGEvent?
 
-    // PID-keyed cache so NSRunningApplication is only resolved when the target
-    // app actually changes (Mos does the same to stay cheap on the hot path).
-    private var lastTargetPID: pid_t = -1
-    private var lastTargetBundleId: String?
-
     // MARK: - Entry point from the event tap (main thread)
 
     /// Returns the event to pass through, or nil to swallow it.
@@ -51,13 +46,10 @@ final class ScrollEngine: NSObject {
         // Leave trackpad / already-continuous input untouched.
         if isContinuousOrTrackpad(event) { return event }
 
-        // The target app comes straight off the event (Mos's approach) — the
-        // system annotates it with the receiving process's PID. NO WindowServer
-        // call here: a synchronous IPC inside a tap callback deadlocks all input.
-        let pid = resolveTargetPID(event)
-        if let pid, let bid = bundleId(for: pid), cfg.excludedApps.contains(bid) {
-            return event
-        }
+        // Per-app pass-through. Target app comes from the event annotation; no
+        // WindowServer call here (that would deadlock the tap).
+        if TargetApp.isExcluded(event, config: cfg) { return event }
+        let pid = TargetApp.pid(of: event)
         currentLocation = event.location
 
         // Read the wheel delta in "lines" (fall back to fixed-point for hi-res wheels).
@@ -112,21 +104,6 @@ final class ScrollEngine: NSObject {
         bufferY = 0
         bufferX = 0
         displayLink?.isPaused = true
-    }
-
-    // MARK: - Target resolution (no WindowServer IPC)
-
-    private func resolveTargetPID(_ event: CGEvent) -> pid_t? {
-        let pid = pid_t(event.getIntegerValueField(.eventTargetUnixProcessID))
-        return pid > 0 ? pid : nil
-    }
-
-    private func bundleId(for pid: pid_t) -> String? {
-        if pid != lastTargetPID {
-            lastTargetPID = pid
-            lastTargetBundleId = NSRunningApplication(processIdentifier: pid)?.bundleIdentifier
-        }
-        return lastTargetBundleId
     }
 
     // MARK: - Classification
@@ -216,9 +193,9 @@ final class ScrollEngine: NSObject {
     }
 
     private func dispatch(_ event: CGEvent, pid: pid_t?) {
-        // Deliver straight to the target app (Mos's approach). This does NOT
-        // touch the session cursor stream, so mouse movement stays responsive
-        // while a fling animates. Session re-injection floods cursor movement.
+        // Deliver straight to the target app. This does NOT touch the session
+        // cursor stream, so mouse movement stays responsive while a fling
+        // animates. Session re-injection would flood cursor movement.
         if let pid, pid > 0 {
             event.postToPid(pid)
         } else {
